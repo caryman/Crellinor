@@ -12,7 +12,6 @@ newtype SimState = SimState [Entity]
 
 data Entity = Entity {
     tag :: Maybe Tag
-  , tick :: Maybe Int
   , position :: Maybe (Int, Int)
   , velocity :: Maybe (Int, Int)
   , height :: Maybe Int
@@ -20,12 +19,11 @@ data Entity = Entity {
   , ttfeed :: Maybe Int -- time to feed or die of starvation
   , ttdie :: Maybe Int -- time until life runs out
   , walk :: Maybe [Move]
-  , input :: Maybe (Event -> Entity -> Entity)
+  , input :: Maybe (Event -> Event -> Event)
   }
 
 newEntity = Entity {
     tag = Nothing
-  , tick = Nothing
   , position = Nothing
   , velocity = Nothing
   , height = Nothing
@@ -42,10 +40,6 @@ data Tag = Man | Food
 data Move = N | W | E | S
     deriving Eq
 
-tickInc :: Entity -> Entity
-tickInc e@Entity{tick = Just t} = e{tick = Just (t+1)}
-tickInc e = e
-
 time :: IO Double
 time = do
     t <- getSystemTime
@@ -57,7 +51,7 @@ data Simulation a = Simulation {
   , frameRate :: Int  -- Max display frame rate
   , simState :: Maybe a
   , updateSim :: Maybe Event -> a -> Maybe a
-  , renderSim :: (Integer, Integer) -> SimState -> Update ()
+  , renderSim :: (Integer, Integer) -> Update ()
   }
 
 newSimulation = Simulation {
@@ -89,19 +83,6 @@ collisionBot e@Entity{position = Just (x, y), velocity = Just (dx, dy), height =
     where h = fromMaybe 0 mh
 collisionBot e = e
 
-collisionRight :: Entity -> Entity
-collisionRight e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
-    | x <= 0 = e{position = Just (-x, y), velocity = Just (-1*dx, dy)}
-    | otherwise = e
-collisionRight e = e
-
-collisionLeft :: Entity -> Entity
-collisionLeft e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
-    | x >= 80 = e{position = Just (-x, y), velocity = Just (-1*dx, dy)}
-    | otherwise = e
-collisionLeft e = e
-
-
 renderEntity :: (Integer, Integer) -> Entity -> Update ()
 renderEntity (rows, cols) e@Entity{position = Just (x, y), height = Just h, text = Just t} = do
     moveCursor rows cols
@@ -121,17 +102,28 @@ integratePosition :: Entity -> Entity
 integratePosition e@Entity{position = Just (x, y), velocity = Just (dx, dy)} = e{position = Just (x + dx, y + dy)}
 integratePosition e = e
 
+--physics :: Simulation a -> SimLoop -> Curses (Simulation a, SimLoop)
+--physics g@Simulation{dt = dt, simState = Just gs} gl@SimLoop{nowTime = now, physicsTime = pt, frameTime = ft}
+--    | pt + 1.0 < ft = physics g gl{physicsTime = now}  -- Skip ahead after missing time
+--    | pt < ft = do
+--        when (now < pt) (liftIO $ threadDelay (truncate (1e6 * clamp (ft - pt) 0.0 dt)))
+--        ev <- getEvent (window gl) (Just 0)
+--        physics s{simState = (updateSimulation g) ev ss} sl{physicsTime = pt + dt}
+--physics s sl = return (s, sl)
 
 physics :: Simulation a -> SimLoop -> Curses (Simulation a, SimLoop)
 physics s@Simulation{simState = Just ss} sl@SimLoop{nowTime = now} = do
     ev <- getEvent (window sl) (Just 0)
+    --s' <- s{simState = (updateSim s) ev ss}  -- Simulation.updateSim holds function updateWorld() which returns Maybe SimState
     t <- liftIO time
+    --sl' <- sl{nowTime = t}
+    --return (s', sl')
     return ( s{simState = (updateSim s) ev ss}, sl{nowTime = t} )
 physics s sl = return (s, sl)
 
 initWorld :: SimState
 initWorld = SimState [
-   newEntity{tag=Just Man,text= Just "O",position=Just (5,5),velocity=Just (1,1),height=Just 1,ttfeed=Just 50,ttdie=Just 100,walk=Just [N,W,S,S,E,W]}
+   newEntity{tag=Just Man,text= Just "O",position=Just (5,5),velocity=Just (1,1),height=Just 1,ttfeed=Just 50,ttdie=Just 100,walk=[N,W,S,S,E,W]}
    ]
 
 -- Input Handlers
@@ -139,21 +131,23 @@ inputApply :: Maybe Event -> Entity -> Entity
 inputApply (Just ev) e@Entity{input = Just f} = f ev e
 inputApply _ e = e
 
-updateWorld :: Maybe Event -> SimState -> Maybe SimState
-updateWorld (Just (EventCharacter 'q')) _ = Nothing
-updateWorld (Just (EventCharacter 'Q')) _ = Nothing
-updateWorld ev (SimState es) = Just $ SimState (system es)
-    where system = map collisionTop . map collisionBot . map collisionLeft . map collisionRight . map integratePosition . map tickInc . map (inputApply ev)
+updateWorld :: Event -> SimState -> Maybe SimState
+updateWorld (EventCharacter 'q') _ = Nothing
+updateWorld (EventCharacter 'Q') _ = Nothing
+updateWorld ev (SimState es) _ = Just $ SimState (system es)
+    where system = map collisionTop . map collisionBottom . map collisionLeft . map collisionRight . map integratePosition . map tickInc . map (inputApply ev)
 
 simLoop :: Simulation a -> SimLoop -> Curses ()
 simLoop Simulation{simState = Nothing} sl = return ()
 simLoop s@Simulation{simState = Just ss} sl = do
-    size <- screenSize
+    size <- screensize
     updateWindow (window sl) ((renderSim s) size ss)
     render
     t <- liftIO time
-    let (s', sl') = (s{simState = (updateSim s)}, sl{nowTime = t, frameTime = 0.0})
+    --(s', sl') <- physics s sl{nowTime = t, frameTime = 0.0}
+    (s', sl') <- (s{simState = (updateSim s)}, sl{nowTime = t, frameTime = 0.0})
     simLoop s' sl'
+    --simLoop s{simState = (updateSim s)}, sl{nowTime = t, frameTime = 0.0}
    
 
 runSimulation :: Simulation a -> IO ()
