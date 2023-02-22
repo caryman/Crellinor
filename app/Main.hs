@@ -84,9 +84,9 @@ collisionTop e = e
 
 collisionBot :: Entity -> Entity
 collisionBot e@Entity{position = Just (x, y), velocity = Just (dx, dy), height = mh}
-    | y + h >= 40 = e{position = Just (x, -y), velocity = Just (dx, -1*dy)}
+    | y + dy >= 40 = e{position = Just (x, y-(-1*dy)), velocity = Just (dx, -1*dy)}
     | otherwise = e
-    where h = fromMaybe 0 mh
+    --where h = fromMaddybe 0 mh
 collisionBot e = e
 
 collisionRight :: Entity -> Entity
@@ -104,17 +104,19 @@ collisionLeft e = e
 
 renderEntity :: (Integer, Integer) -> Entity -> Update ()
 renderEntity (rows, cols) e@Entity{position = Just (x, y), height = Just h, text = Just t} = do
-    moveCursor rows cols
+    moveCursor (fromIntegral x) (fromIntegral y)
     drawString t
 renderEntity _ _ = return ()
 
 renderWorld :: (Integer, Integer) -> SimState -> Update ()
 renderWorld (rows, cols) (SimState es) = do
-    clear
+    --clear
     moveCursor 0 0
-    drawLineH Nothing cols
-    moveCursor (rows-1) 0
-    drawLineH Nothing cols
+    --drawLineH Nothing cols
+    --moveCursor (rows-1) 0
+    --drawLineH Nothing cols
+    --moveCursor 1 3
+    drawString ("rows: " ++ show (rows) ++ " cols: " ++ show (cols)) 
     mapM_ (renderEntity (rows, cols)) es
 
 integratePosition :: Entity -> Entity
@@ -131,7 +133,7 @@ physics s sl = return (s, sl)
 
 initWorld :: SimState
 initWorld = SimState [
-   newEntity{tag=Just Man,text= Just "O",position=Just (5,5),velocity=Just (1,1),height=Just 1,ttfeed=Just 50,ttdie=Just 100,walk=Just [N,W,S,S,E,W]}
+   newEntity{tag=Just Man,text= Just "O",position=Just (0,0),velocity=Just (1,1),height=Just 1,ttfeed=Just 50,ttdie=Just 100,walk=Just [N,W,S,S,E,W]}
    ]
 
 -- Input Handlers
@@ -151,19 +153,19 @@ simLoop s@Simulation{simState = Just ss} sl = do
     size <- screenSize
     updateWindow (window sl) ((renderSim s) size ss)
     t <- liftIO time
+    liftIO $ threadDelay $ 50000
     render
     ev <- getEvent (window sl) (Just 0)
     let (s', sl') = (s{simState = (updateSim s) ev ss}, sl{nowTime = t, frameTime = 0.0})
     simLoop s' sl'
    
-
 runSimulation :: Simulation a -> IO ()
-runSimulation g = runCurses $ do
+runSimulation s = runCurses $ do
     setCursorMode CursorInvisible
     setEcho False
     w <- defaultWindow
     t <- liftIO time
-    simLoop g SimLoop{window = w, nowTime = t, frameTime = t, physicsTime = t, fps = 0.0}
+    simLoop s SimLoop{window = w, nowTime = t, frameTime = t, physicsTime = t, fps = 0.0}
 
 -- Program entry point
 main :: IO ()
