@@ -57,7 +57,7 @@ data Simulation a = Simulation {
   , frameRate :: Int  -- Max display frame rate
   , simState :: Maybe a
   , updateSim :: Maybe Event -> a -> Maybe a
-  , renderSim :: (Integer, Integer) -> SimState -> Update ()
+  , renderSim :: (Integer, Integer) -> a -> Update ()
   }
 
 newSimulation = Simulation {
@@ -150,9 +150,10 @@ simLoop Simulation{simState = Nothing} sl = return ()
 simLoop s@Simulation{simState = Just ss} sl = do
     size <- screenSize
     updateWindow (window sl) ((renderSim s) size ss)
-    render
     t <- liftIO time
-    let (s', sl') = (s{simState = (updateSim s)}, sl{nowTime = t, frameTime = 0.0})
+    render
+    ev <- getEvent (window sl) (Just 0)
+    let (s', sl') = (s{simState = (updateSim s) ev ss}, sl{nowTime = t, frameTime = 0.0})
     simLoop s' sl'
    
 
