@@ -56,7 +56,7 @@ data Simulation a = Simulation {
     dt :: Int         -- Physics simulation time step
   , frameRate :: Int  -- Max display frame rate
   , simState :: Maybe a
-  , updateSim :: Maybe Event -> a -> Maybe a
+  , updateSim :: Maybe Event -> (Integer, Integer) -> a -> Maybe a
   , renderSim :: (Integer, Integer) -> a -> Update ()
   }
 
@@ -82,22 +82,23 @@ collisionTop e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
     | otherwise = e
 collisionTop e = e
 
-collisionBot :: Entity -> Entity
-collisionBot e@Entity{position = Just (x, y), velocity = Just (dx, dy), height = mh}
-    | y + dy >= 40 = e{position = Just (x, y-(-1*dy)), velocity = Just (dx, -1*dy)}
+collisionBot :: (Integer, Integer) -> Entity -> Entity
+collisionBot (rows, cols) e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
+    | y >= bottom = e{position = Just (x, y-dy), velocity = Just (dx, -1*dy)}
     | otherwise = e
-    --where h = fromMaddybe 0 mh
-collisionBot e = e
+    where  bottom = fromIntegral(cols-1)
+collisionBot _ e = e
 
-collisionRight :: Entity -> Entity
-collisionRight e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
-    | x <= 0 = e{position = Just (-x, y), velocity = Just (-1*dx, dy)}
+collisionRight :: (Integer, Integer) -> Entity -> Entity
+collisionRight (rows, cols) e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
+    | x >= right = e{position = Just (x, y), velocity = Just (-1*dx, dy)}
     | otherwise = e
-collisionRight e = e
+    where right = fromIntegral(rows-1)
+collisionRight _ e = e
 
 collisionLeft :: Entity -> Entity
 collisionLeft e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
-    | x >= 80 = e{position = Just (-x, y), velocity = Just (-1*dx, dy)}
+    | x <= 0 = e{position = Just (x, y), velocity = Just (-1*dx, dy)}
     | otherwise = e
 collisionLeft e = e
 
@@ -124,13 +125,6 @@ integratePosition e@Entity{position = Just (x, y), velocity = Just (dx, dy)} = e
 integratePosition e = e
 
 
-physics :: Simulation a -> SimLoop -> Curses (Simulation a, SimLoop)
-physics s@Simulation{simState = Just ss} sl@SimLoop{nowTime = now} = do
-    ev <- getEvent (window sl) (Just 0)
-    t <- liftIO time
-    return ( s{simState = (updateSim s) ev ss}, sl{nowTime = t} )
-physics s sl = return (s, sl)
-
 initWorld :: SimState
 initWorld = SimState [
    newEntity{tag=Just Man,text= Just "O",position=Just (0,0),velocity=Just (1,1),height=Just 1,ttfeed=Just 50,ttdie=Just 100,walk=Just [N,W,S,S,E,W]}
@@ -141,11 +135,11 @@ inputApply :: Maybe Event -> Entity -> Entity
 inputApply (Just ev) e@Entity{input = Just f} = f ev e
 inputApply _ e = e
 
-updateWorld :: Maybe Event -> SimState -> Maybe SimState
-updateWorld (Just (EventCharacter 'q')) _ = Nothing
-updateWorld (Just (EventCharacter 'Q')) _ = Nothing
-updateWorld ev (SimState es) = Just $ SimState (system es)
-    where system = map collisionTop . map collisionBot . map collisionLeft . map collisionRight . map integratePosition . map tickInc . map (inputApply ev)
+updateWorld :: Maybe Event -> (Integer, Integer) -> SimState -> Maybe SimState
+updateWorld (Just (EventCharacter 'q')) _ _ = Nothing
+updateWorld (Just (EventCharacter 'Q')) _ _ = Nothing
+updateWorld ev (rows, cols) (SimState es) = Just $ SimState (system es)   
+    where system = map collisionTop . map (collisionBot (rows, cols)) . map collisionLeft . map (collisionRight (rows, cols)) . map integratePosition . map tickInc . map (inputApply ev)
 
 simLoop :: Simulation a -> SimLoop -> Curses ()
 simLoop Simulation{simState = Nothing} sl = return ()
@@ -156,7 +150,7 @@ simLoop s@Simulation{simState = Just ss} sl = do
     liftIO $ threadDelay $ 50000
     render
     ev <- getEvent (window sl) (Just 0)
-    let (s', sl') = (s{simState = (updateSim s) ev ss}, sl{nowTime = t, frameTime = 0.0})
+    let (s', sl') = (s{simState = (updateSim s) ev size ss}, sl{nowTime = t, frameTime = 0.0})
     simLoop s' sl'
    
 runSimulation :: Simulation a -> IO ()
