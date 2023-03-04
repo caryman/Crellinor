@@ -8,160 +8,125 @@ import Data.Time.Clock.System
 import System.Posix.Unistd
 import UI.NCurses
 
-newtype SimState = SimState [Entity]
+newtype Objects = Objects [Object]
 
-data Entity = Entity {
-    tag :: Maybe Tag
-  , tick :: Maybe Int
-  , position :: Maybe (Int, Int)
-  , velocity :: Maybe (Int, Int)
-  , height :: Maybe Int
-  , text :: Maybe String
-  , ttfeed :: Maybe Int -- time to feed or die of starvation
-  , ttdie :: Maybe Int -- time until life runs out
-  , walk :: Maybe [Move]
-  , input :: Maybe (Event -> Entity -> Entity)
+data Object = Object {
+    position1 :: (Int, Int)
+  , position2 :: (Int, Int)
+  , velocity :: (Int, Int)
+  , text :: String
+  , ttfeed :: Int -- time to feed or die of starvation
+  , ttdie :: Int  -- time until life runs out
+  , walk :: [Move]
   }
 
-newEntity = Entity {
-    tag = Nothing
-  , tick = Nothing
-  , position = Nothing
-  , velocity = Nothing
-  , height = Nothing
-  , text = Nothing
-  , ttfeed = Nothing  -- time to feed or die
-  , ttdie = Nothing -- time until death
-  , walk = Nothing
-  , input = Nothing
+newObject = Object {
+    position1 = (1, 1)
+  , position2 = (0, 0)
+  , velocity = (1, 0)
+  , text = "o"
+  , ttfeed = 50  -- time to feed or die
+  , ttdie = 100  -- time until death
+  , walk = [E, S, E, N, W, S]
   }
-
-data Tag = Man | Food
-    deriving Eq
 
 data Move = N | W | E | S
     deriving Eq
 
-tickInc :: Entity -> Entity
-tickInc e@Entity{tick = Just t} = e{tick = Just (t+1)}
-tickInc e = e
+checkBoundary :: (Integer, Integer) -> Object -> Object
+checkBoundary (rows, cols) o@Object{position1 = (x, y), position2 = (x2, y2), velocity = (dx, dy)}
+    | (y <= 0 && dy < 0) || (y >= bottom && dy > 0) = o{velocity = (dx, -dy)}
+    | (x <= 0 && dx < 0) || (x >= right && dx > 0) = o{velocity = (-dx, dy)}
+    | otherwise = o
+    where
+       bottom = fromIntegral(rows-1)
+       right = fromIntegral(cols-1)
+collisionTop o = o
 
-time :: IO Double
-time = do
-    t <- getSystemTime
-    return ((fromIntegral (systemSeconds t)) + (fromIntegral (systemNanoseconds t)) * 1e-9)
-
--- A Simulation
-data Simulation a = Simulation {
-    dt :: Int         -- Physics simulation time step
-  , frameRate :: Int  -- Max display frame rate
-  , simState :: Maybe a
-  , updateSim :: Maybe Event -> (Integer, Integer) -> a -> Maybe a
-  , renderSim :: (Integer, Integer) -> a -> Update ()
-  }
-
-newSimulation = Simulation {
-    dt = 1
-  , frameRate = 60
-  , simState = Nothing
-  , updateSim = undefined
-  , renderSim = undefined
-  }
-
-data SimLoop = SimLoop {
-    window :: Window         -- Current display window
-  , nowTime :: Double        -- Current time
-  , frameTime :: Double      -- Next frame will be displayed at this time
-  , physicsTime :: Double    -- Physics has been simulated up to this time
-  , fps :: Double            -- Current frame per second estimate
-  }
-
-collisionTop :: Entity -> Entity
-collisionTop e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
-    | y <= 0 = e{position = Just (x, -y), velocity = Just (dx, -1*dy)}
-    | otherwise = e
-collisionTop e = e
-
-collisionBot :: (Integer, Integer) -> Entity -> Entity
-collisionBot (rows, cols) e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
-    | y >= bottom = e{position = Just (x, y-dy), velocity = Just (dx, -1*dy)}
-    | otherwise = e
-    where  bottom = fromIntegral(cols-1)
-collisionBot _ e = e
-
-collisionRight :: (Integer, Integer) -> Entity -> Entity
-collisionRight (rows, cols) e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
-    | x >= right = e{position = Just (x, y), velocity = Just (-1*dx, dy)}
-    | otherwise = e
-    where right = fromIntegral(rows-1)
-collisionRight _ e = e
-
-collisionLeft :: Entity -> Entity
-collisionLeft e@Entity{position = Just (x, y), velocity = Just (dx, dy)}
-    | x <= 0 = e{position = Just (x, y), velocity = Just (-1*dx, dy)}
-    | otherwise = e
-collisionLeft e = e
-
-
-renderEntity :: (Integer, Integer) -> Entity -> Update ()
-renderEntity (rows, cols) e@Entity{position = Just (x, y), height = Just h, text = Just t} = do
-    moveCursor (fromIntegral x) (fromIntegral y)
+renderObject :: (Integer, Integer) -> Object -> Update ()
+renderObject (rows, cols) o@Object{position1 = (x, y), text = t} = do
+    moveCursor 5 20
+    drawString "xxxxxsdfxxxxx"
+    moveCursor 5 20
+    drawString ("x: " ++ show (x) ++ " y: " ++ show (y)) 
+    moveCursor (fromIntegral y) (fromIntegral x)
     drawString t
-renderEntity _ _ = return ()
+renderObject _ _ = return ()
 
-renderWorld :: (Integer, Integer) -> SimState -> Update ()
-renderWorld (rows, cols) (SimState es) = do
+renderWorld :: (Integer, Integer) -> Objects -> Update ()
+renderWorld (rows, cols) (Objects objs) = do
     --clear
-    moveCursor 0 0
-    --drawLineH Nothing cols
-    --moveCursor (rows-1) 0
-    --drawLineH Nothing cols
-    --moveCursor 1 3
+    moveCursor 2 10
     drawString ("rows: " ++ show (rows) ++ " cols: " ++ show (cols)) 
-    mapM_ (renderEntity (rows, cols)) es
+    mapM_ (renderObject (rows, cols)) objs
 
-integratePosition :: Entity -> Entity
-integratePosition e@Entity{position = Just (x, y), velocity = Just (dx, dy)} = e{position = Just (x + dx, y + dy)}
-integratePosition e = e
+updatePosition :: Object -> Object
+updatePosition o@Object{position1 = (x, y), velocity = (dx, dy)} = o{position1 = (x + dx, y + dy)}
+updatePosition o = o
 
-
-initWorld :: SimState
-initWorld = SimState [
-   newEntity{tag=Just Man,text= Just "O",position=Just (0,0),velocity=Just (1,1),height=Just 1,ttfeed=Just 50,ttdie=Just 100,walk=Just [N,W,S,S,E,W]}
+initWorld :: Objects
+initWorld = Objects [
+   newObject {
+       position1 = (0,0)
+     , position2 = (0,0)
+     , velocity  = (1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+       }
    ]
 
--- Input Handlers
-inputApply :: Maybe Event -> Entity -> Entity
-inputApply (Just ev) e@Entity{input = Just f} = f ev e
-inputApply _ e = e
+updateWorld :: (Integer, Integer) -> Objects -> Objects
+updateWorld (rows, cols) (Objects objs) = Objects (system objs)   
+    where system = map (checkBoundary (rows, cols)) . map updatePosition
 
-updateWorld :: Maybe Event -> (Integer, Integer) -> SimState -> Maybe SimState
-updateWorld (Just (EventCharacter 'q')) _ _ = Nothing
-updateWorld (Just (EventCharacter 'Q')) _ _ = Nothing
-updateWorld ev (rows, cols) (SimState es) = Just $ SimState (system es)   
-    where system = map collisionTop . map (collisionBot (rows, cols)) . map collisionLeft . map (collisionRight (rows, cols)) . map integratePosition . map tickInc . map (inputApply ev)
+data KeyAction = NoAction | Quit | LPaddleUp | LPaddleDn | RPaddleUp | RPaddleDn | Restart | Pause | Faster | Slower deriving (Eq, Show) 
 
-simLoop :: Simulation a -> SimLoop -> Curses ()
-simLoop Simulation{simState = Nothing} sl = return ()
-simLoop s@Simulation{simState = Just ss} sl = do
+checkKeyboard :: Curses (Maybe KeyAction)
+checkKeyboard = do
+    w <- defaultWindow
+    e <- getEvent w (Just 0)
+    return $ case e of
+       Nothing -> Just NoAction
+       Just (EventCharacter 'q') -> Nothing
+       --Just (EventCharacter 'r') -> Just Restart
+       --Just (EventCharacter 'k') -> Just RPaddleUp
+       --Just (EventCharacter 'l') -> Just RPaddleDn
+       --Just (EventCharacter 'a') -> Just LPaddleUp
+       --Just (EventCharacter 's') -> Just LPaddleDn
+       --Just (EventCharacter 'p') -> Just Pause
+       --Just (EventCharacter '-') -> Just Slower
+       --Just (EventCharacter '=') -> Just Faster
+       Just _ -> Just NoAction
+
+simLoop :: Objects -> Curses ()
+simLoop objs = do
     size <- screenSize
-    updateWindow (window sl) ((renderSim s) size ss)
-    t <- liftIO time
+    w <- defaultWindow
+    updateWindow w (renderWorld size objs)
     liftIO $ threadDelay $ 50000
     render
-    ev <- getEvent (window sl) (Just 0)
-    let (s', sl') = (s{simState = (updateSim s) ev size ss}, sl{nowTime = t, frameTime = 0.0})
-    simLoop s' sl'
+    k <- checkKeyboard
+    if k == Nothing 
+        then return ()
+    else
+       simLoop $ updateWorld size objs
    
-runSimulation :: Simulation a -> IO ()
-runSimulation s = runCurses $ do
+runSimulation :: IO ()
+runSimulation = runCurses $ do
     setCursorMode CursorInvisible
     setEcho False
-    w <- defaultWindow
-    t <- liftIO time
-    simLoop s SimLoop{window = w, nowTime = t, frameTime = t, physicsTime = t, fps = 0.0}
+    simLoop initWorld
 
 -- Program entry point
 main :: IO ()
-main = runSimulation newSimulation{simState = Just initWorld, updateSim = updateWorld, renderSim = renderWorld}
+main = runSimulation
+
+quit :: Curses ()
+quit = do
+    w <- defaultWindow
+    updateWindow w $ do
+        clear
+    render
 
