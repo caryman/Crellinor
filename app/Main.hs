@@ -76,7 +76,34 @@ initWorld = Objects [
      , ttfeed    = 50
      , ttdie     = 100
      , walk      = [N,W,S,S,E,W]
-       }
+     },
+   newObject {
+       position1 = (4,5)
+     , position2 = (5,4)
+     , velocity  = (-1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [S,S,W,N,E,W]
+     },
+   newObject {
+       position1 = (8,8)
+     , position2 = (9,9)
+     , velocity  = (-1,-1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+   newObject {
+       position1 = (12,7)
+     , position2 = (11,6)
+     , velocity  = (1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     }
    ]
 
 updateWorld :: (Integer, Integer) -> Objects -> Objects
