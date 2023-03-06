@@ -35,13 +35,13 @@ data Move = N | W | E | S
 
 checkBoundary :: (Integer, Integer) -> Object -> Object
 checkBoundary (rows, cols) o@Object{position1 = (x, y), position2 = (x2, y2), velocity = (dx, dy)}
-    | (y <= 0 && dy < 0) || (y >= bottom && dy > 0) = o{velocity = (dx, -dy)}
-    | (x <= 0 && dx < 0) || (x >= right && dx > 0) = o{velocity = (-dx, dy)}
+    | (y <= 1 && dy < 0) || (y >= bottom && dy > 0) = o{velocity = (dx, -dy)}
+    | (x <= 1 && dx < 0) || (x >= right && dx > 0) = o{velocity = (-dx, dy)}
     | otherwise = o
     where
        bottom = fromIntegral(rows-1)
        right = fromIntegral(cols-1)
-collisionTop o = o
+checkBoundary _ o = o
 
 renderObject :: (Integer, Integer) -> Object -> Update ()
 renderObject (rows, cols) o@Object{position1 = (x, y), position2 = (x2, y2), text = t} = do
@@ -78,8 +78,8 @@ initWorld = Objects [
      , walk      = [N,W,S,S,E,W]
      },
    newObject {
-       position1 = (4,5)
-     , position2 = (5,4)
+       position1 = (14,15)
+     , position2 = (15,14)
      , velocity  = (-1,1)
      , text      = "o"
      , ttfeed    = 50
@@ -87,7 +87,7 @@ initWorld = Objects [
      , walk      = [S,S,W,N,E,W]
      },
    newObject {
-       position1 = (8,8)
+       position1 = (18,18)
      , position2 = (9,9)
      , velocity  = (-1,-1)
      , text      = "o"
@@ -103,12 +103,84 @@ initWorld = Objects [
      , ttfeed    = 50
      , ttdie     = 100
      , walk      = [N,W,S,S,E,W]
+     },
+   newObject {
+       position1 = (55,10)
+     , position2 = (11,6)
+     , velocity  = (1,-1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+   newObject {
+       position1 = (70,12)
+     , position2 = (11,6)
+     , velocity  = (-1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+   newObject {
+       position1 = (0,0)
+     , position2 = (0,0)
+     , velocity  = (1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+   newObject {
+       position1 = (14,15)
+     , position2 = (15,14)
+     , velocity  = (-1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [S,S,W,N,E,W]
+     },
+   newObject {
+       position1 = (44,5)
+     , position2 = (9,9)
+     , velocity  = (1,-1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+   newObject {
+       position1 = (12,7)
+     , position2 = (11,6)
+     , velocity  = (1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+   newObject {
+       position1 = (55,10)
+     , position2 = (11,6)
+     , velocity  = (1,-1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+   newObject {
+       position1 = (70,12)
+     , position2 = (11,6)
+     , velocity  = (-1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
      }
    ]
 
 updateWorld :: (Integer, Integer) -> Objects -> Objects
 updateWorld (rows, cols) (Objects objs) = Objects (system objs)   
-    where system = map (checkBoundary (rows, cols)) . map updatePosition
+    where system = map updatePosition . map (checkBoundary (rows, cols))
 
 data KeyAction = NoAction | Quit | LPaddleUp | LPaddleDn | RPaddleUp | RPaddleDn | Restart | Pause | Faster | Slower deriving (Eq, Show) 
 
