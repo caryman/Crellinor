@@ -44,13 +44,15 @@ checkBoundary (rows, cols) o@Object{position1 = (x, y), position2 = (x2, y2), ve
 collisionTop o = o
 
 renderObject :: (Integer, Integer) -> Object -> Update ()
-renderObject (rows, cols) o@Object{position1 = (x, y), text = t} = do
+renderObject (rows, cols) o@Object{position1 = (x, y), position2 = (x2, y2), text = t} = do
     moveCursor 5 20
-    drawString "xxxxxsdfxxxxx"
+    drawString "               "
     moveCursor 5 20
     drawString ("x: " ++ show (x) ++ " y: " ++ show (y)) 
     moveCursor (fromIntegral y) (fromIntegral x)
     drawString t
+    moveCursor (fromIntegral y2) (fromIntegral x2)
+    drawString " "
 renderObject _ _ = return ()
 
 renderWorld :: (Integer, Integer) -> Objects -> Update ()
@@ -61,7 +63,7 @@ renderWorld (rows, cols) (Objects objs) = do
     mapM_ (renderObject (rows, cols)) objs
 
 updatePosition :: Object -> Object
-updatePosition o@Object{position1 = (x, y), velocity = (dx, dy)} = o{position1 = (x + dx, y + dy)}
+updatePosition o@Object{position1 = (x, y), position2 = (x2, y2), velocity = (dx, dy)} = o{position1 = (x + dx, y + dy), position2 = (x, y)}
 updatePosition o = o
 
 initWorld :: Objects
