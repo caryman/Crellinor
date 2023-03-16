@@ -24,6 +24,12 @@ dependencies:
 - ncurses
 - time
 - unix
+- bytestring
+- yaml
+- text
+- filepath
+- directory
+- random
 
 library:
   source-dirs: src

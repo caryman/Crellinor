@@ -7,6 +7,12 @@ import Data.Maybe
 import Data.Time.Clock.System
 import System.Posix.Unistd
 import UI.NCurses
+import System.IO
+import System.Directory
+import Data.Char
+import System.Random
+import Data.Typeable(typeOf)
+import Config
 
 newtype Objects = Objects [Object]
 
@@ -32,6 +38,12 @@ newObject = Object {
 
 data Move = N | W | E | S
     deriving Eq
+
+globalVars :: CrellinorConfig
+globalVars = CrellinorConfig {
+    ccEntitySpeed = 0
+  , ccEntityCount = 1
+  }
 
 checkBoundary :: (Integer, Integer) -> Object -> Object
 checkBoundary (rows, cols) o@Object{position1 = (x, y), position2 = (x2, y2), velocity = (dx, dy)}
@@ -66,8 +78,13 @@ updatePosition :: Object -> Object
 updatePosition o@Object{position1 = (x, y), position2 = (x2, y2), velocity = (dx, dy)} = o{position1 = (x + dx, y + dy), position2 = (x, y)}
 updatePosition o = o
 
-initWorld :: Objects
-initWorld = Objects [
+--initWorld2 :: CrellinorConfig -> Objects
+--initWorld2 c = do
+--    g <- getStdGen
+--    let x = [ newObect {
+
+initWorld :: CrellinorConfig -> Objects
+initWorld c = Objects [
    newObject {
        position1 = (0,0)
      , position2 = (0,0)
@@ -168,7 +185,70 @@ initWorld = Objects [
      , walk      = [N,W,S,S,E,W]
      },
    newObject {
-       position1 = (70,12)
+       position1 = (10,2)
+     , position2 = (11,6)
+     , velocity  = (1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+    newObject {
+       position1 = (17,24)
+     , position2 = (11,6)
+     , velocity  = (-1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+    newObject {
+       position1 = (33,13)
+     , position2 = (11,6)
+     , velocity  = (1,-1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+     newObject {
+       position1 = (0,0)
+     , position2 = (11,6)
+     , velocity  = (1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+    newObject {
+       position1 = (12,12)
+     , position2 = (11,6)
+     , velocity  = (-1,-1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+    newObject {
+       position1 = (44,2)
+     , position2 = (11,6)
+     , velocity  = (-1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+    newObject {
+       position1 = (8,8)
+     , position2 = (11,6)
+     , velocity  = (1,1)
+     , text      = "o"
+     , ttfeed    = 50
+     , ttdie     = 100
+     , walk      = [N,W,S,S,E,W]
+     },
+    newObject {
+       position1 = (9,19)
      , position2 = (11,6)
      , velocity  = (-1,1)
      , text      = "o"
@@ -176,7 +256,7 @@ initWorld = Objects [
      , ttdie     = 100
      , walk      = [N,W,S,S,E,W]
      }
-   ]
+  ]
 
 updateWorld :: (Integer, Integer) -> Objects -> Objects
 updateWorld (rows, cols) (Objects objs) = Objects (system objs)   
@@ -201,28 +281,91 @@ checkKeyboard = do
        --Just (EventCharacter '=') -> Just Faster
        Just _ -> Just NoAction
 
-simLoop :: Objects -> Curses ()
-simLoop objs = do
+
+simLoop :: Objects -> CrellinorConfig -> Curses ()
+simLoop objs c = do
     size <- screenSize
     w <- defaultWindow
     updateWindow w (renderWorld size objs)
-    liftIO $ threadDelay $ 50000
+    liftIO $ threadDelay $ (ccEntitySpeed c) -- 50000
     render
     k <- checkKeyboard
     if k == Nothing 
         then return ()
     else
-       simLoop $ updateWorld size objs
-   
-runSimulation :: IO ()
-runSimulation = runCurses $ do
+       simLoop (updateWorld size objs) c
+
+runSimulation :: CrellinorConfig -> IO ()
+runSimulation c = runCurses $ do
     setCursorMode CursorInvisible
     setEcho False
-    simLoop initWorld
+    size <- screenSize
+    let n = newObject {
+        position1 = (getCol size, getRow size) :: (Int, Int)
+      , position2 = (getCol size, getRow size) :: (Int, Int)
+      , velocity  = (-1,1)
+      , text      = "o"
+      , ttfeed    = 50
+      , ttdie     = 100
+      , walk      = [N,W,S,S,E,W]
+      }
+    
+    simLoop (initWorld c) c
 
 -- Program entry point
 main :: IO ()
-main = runSimulation
+main = do
+    globalVars <- readConfig
+    print $ (ccEntitySpeed globalVars)
+
+    num <- randomIO :: IO Int
+    print $ myPureFunction num
+    g <- newStdGen
+    let ns = randoms g :: [Int]
+    print $ take 10 ns
+
+    let (x, r) = randomR (0, 999) g
+    print $ show (x :: Int)
+
+    let (y, rg) = randomR ('A', 'Z') r
+    print $ show y
+
+    let c = randomRs (0, 999) rg :: [Int]
+    mapM print . take 10 $ c
+
+    x2 <- getStdRandom $ randomR (1,999) 
+    print $ show (x2 :: Int)
+
+    let x3 = getRIntIO (0,99) 5
+
+    gen <- getStdGen
+    let xs = randoms gen :: [Int]
+    print $ take 10 xs
+
+    gn <- getStdGen
+    let x5 = getRInt gn (0,999) 10
+    mapM print $ x5
+    print $ "shit" ++ " " ++ show (typeOf x5) 
+
+    runSimulation globalVars
+
+getRow :: (Integer, Integer) -> Int
+getRow (rows, cols) = getARInt rows :: Int
+
+getCol :: (Integer, Integer) -> Int
+getCol (rows, cols) = getARInt cols :: Int
+
+getARInt :: Integer -> Int
+getARInt ubound = getStdRandom $ randomR (0, 999) :: Int
+
+getRInt :: (RandomGen g) => g -> (Int,Int) -> Int -> [Int]
+getRInt r (lbound, ubound) amt = take amt $ randomRs (lbound,ubound) r
+
+getRIntIO :: (Int,Int) -> Int -> IO [Int]
+getRIntIO (lbound, ubound) amt = do
+    r1 <- getStdGen
+    let x = randomRs (lbound,ubound) r1
+    return x
 
 quit :: Curses ()
 quit = do
@@ -230,4 +373,21 @@ quit = do
     updateWindow w $ do
         clear
     render
+
+-- nothing to say
+readConfig :: IO CrellinorConfig
+readConfig = do
+    path <- System.Directory.getCurrentDirectory
+    let fileNameAndPath = path ++ "/" ++ fileName
+    print(fileNameAndPath)
+    ymlData <- readConfigurationGeneric fileNameAndPath :: IO CrellinorConfig
+    print $ ymlData
+    writeConfiguration fileNameAndPath ymlData
+    newConfig <- newConfiguration fileNameAndPath :: IO Configuration
+    print $ configurationPath newConfig
+    mv <- takeMVar (configurationVar newConfig)
+    return mv
+
+myPureFunction :: Int -> Int
+myPureFunction x = 2 * x
 
