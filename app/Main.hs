@@ -345,7 +345,7 @@ main = do
     gn <- getStdGen
     let x5 = getRInt gn (0,999) 10
     mapM print $ x5
-    print $ "shit" ++ " " ++ show (typeOf x5) 
+    print $ "typeof x5: " ++ show (typeOf x5) 
 
     runSimulation globalVars
 
