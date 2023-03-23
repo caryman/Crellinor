@@ -30,8 +30,8 @@ data Object = Object {
 
 getRandomPosition :: IO Position
 getRandomPosition = do
-  randomX <- randomRIO (1, 1920)
-  randomY <- randomRIO (1, 1080)
+  randomX <- randomRIO (1, 150)
+  randomY <- randomRIO (1, 59)
   return $ Position randomX randomY
 
 getRandomPosition2 :: Position  -> IO Position
@@ -51,8 +51,8 @@ getRandomObject = do
   randomPosition2 <- getRandomPosition2 randomPosition1
   return $ Object randomPosition1 randomPosition2 randomVelocity "o" 50 100 [E, S, E, N, W, S]
 
-getRandomObjects :: Objects
-getRandomObjects = Objects liftIO $ replicateM 5 getRandomObject
+getRandomObjects :: IO Objects
+getRandomObjects = Objects <$> replicateM 150 getRandomObject
 
 newObject = Object {
     position1 = Position {x = 1, y = 1}
@@ -85,10 +85,10 @@ checkBoundary _ o = o
 
 renderObject :: (Integer, Integer) -> Object -> Update ()
 renderObject (rows, cols) o@Object{position1 = Position {x=x1, y=y1}, position2 = Position {x=x2,y=y2}, text = t} = do
-    moveCursor 5 20
-    drawString "               "
-    moveCursor 5 20
-    drawString ("x: " ++ show (x1) ++ " y: " ++ show (y1)) 
+--    moveCursor 5 20
+--    drawString "               "
+--    moveCursor 5 20
+--    drawString ("x: " ++ show (x1) ++ " y: " ++ show (y1)) 
     moveCursor (fromIntegral y1) (fromIntegral x1)
     drawString t
     moveCursor (fromIntegral y2) (fromIntegral x2)
@@ -106,186 +106,6 @@ updatePosition :: Object -> Object
 updatePosition o@Object{position1 = Position {x=x1, y=y1}, position2 = Position {x=x2, y=y2}, velocity = Velocity {dx=dx1, dy=dy1}} = o{position1 = Position {x = (x1 + dx1), y = (y1 + dy1)}, position2 = Position {x=x1, y=y1}}
 updatePosition o = o
 
-
-initWorld2 :: CrellinorConfig -> Objects
-initWorld2 c = liftIO getRandomObjects
-   
-
-
-initWorld :: CrellinorConfig -> Objects
-initWorld c = Objects [
-   newObject {
-       position1 = Position {x=0,y=0}
-     , position2 = Position {x=0,y=0}
-     , velocity  = Velocity {dx=1,dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-   newObject {
-       position1 = Position {x=14,y=15}
-     , position2 = Position {x=15,y=14}
-     , velocity  = Velocity {dx=(-1),dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [S,S,W,N,E,W]
-     },
-   newObject {
-       position1 = Position {x=18,y=18}
-     , position2 = Position {x=9,y=9}
-     , velocity  = Velocity {dx=(-1),dy=(-1)}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-   newObject {
-       position1 = Position {x=12,y=7}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=1,dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-   newObject {
-       position1 = Position {x=55,y=10}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=1,dy=(-1)}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-   newObject {
-       position1 = Position {x=70,y=12}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=(-1),dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-   newObject {
-       position1 = Position {x=0,y=0}
-     , position2 = Position {x=0,y=0}
-     , velocity  = Velocity {dx=1,dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-   newObject {
-       position1 = Position {x=14,y=15}
-     , position2 = Position {x=15,y=14}
-     , velocity  = Velocity {dx=(-1),dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [S,S,W,N,E,W]
-     },
-   newObject {
-       position1 = Position {x=44,y=5}
-     , position2 = Position {x=9,y=9}
-     , velocity  = Velocity {dx=1,dy=(-1)}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-   newObject {
-       position1 = Position {x=12,y=7}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=1,dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-   newObject {
-       position1 = Position {x=55,y=10}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=1,dy=(-1)}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-   newObject {
-       position1 = Position {x=10,y=2}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=1,dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-    newObject {
-       position1 = Position {x=17,y=24}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=(-1),dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-    newObject {
-       position1 = Position {x=33,y=13}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=1,dy=(-1)}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-     newObject {
-       position1 = Position {x=1,y=1}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=1,dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-    newObject {
-       position1 = Position {x=12,y=12}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=(-1),dy=(-1)}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-    newObject {
-       position1 = Position {x=44,y=2}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=(-1),dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-    newObject {
-       position1 = Position {x=8,y=8}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=1,dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     },
-    newObject {
-       position1 = Position {x=9,y=19}
-     , position2 = Position {x=11,y=6}
-     , velocity  = Velocity {dx=(-1),dy=1}
-     , text      = "o"
-     , ttfeed    = 50
-     , ttdie     = 100
-     , walk      = [N,W,S,S,E,W]
-     }
-  ]
 
 updateWorld :: (Integer, Integer) -> Objects -> Objects
 updateWorld (rows, cols) (Objects objs) = Objects (system objs)   
@@ -331,7 +151,8 @@ runSimulation c = runCurses $ do
     size <- screenSize
     row <- liftIO $ getRow size
     col <- liftIO $ getCol size
-    simLoop (initWorld c) c
+    (Objects objs) <- liftIO $ getRandomObjects
+    simLoop (Objects objs) c
 
 -- Program entry point
 main :: IO ()
@@ -339,47 +160,7 @@ main = do
     globalVars <- readConfig
     print $ (ccEntitySpeed globalVars)
 
-    num <- randomIO :: IO Int
-    print $ myPureFunction num
-    g <- newStdGen
-    let ns = randoms g :: [Int]
-    print $ take 10 ns
-
-    let (x, r) = randomR (0, 999) g
-    print $ show (x :: Int)
-
-    let (y, rg) = randomR ('A', 'Z') r
-    print $ show y
-
-    let c = randomRs (0, 999) rg :: [Int]
-    mapM print . take 10 $ c
-
-    x2 <- getStdRandom $ randomR (1,999) 
-    print $ show (x2 :: Int)
-
-    let x3 = getRIntIO (0,99) 5
-
-    gen <- getStdGen
-    let xs = randoms gen :: [Int]
-    print $ take 10 xs
-
-    gn <- getStdGen
-    let x5 = getRInt gn (0,999) 10
-    mapM print $ x5
-    print $ "typeof x5: " ++ show (typeOf x5) 
-    
-    p <- rollDice
-    print $ "roll dice: " ++ show p
-
-    row <- getRow (1023, 1023) 
-    print $ "random row coord: " ++ show row
-
-    randomObject <- getRandomObject
-    print $ randomObject
-    objects <- getRandomObjects
-    print $ objects
-
---    runSimulation globalVars
+    runSimulation globalVars
 
 
 getRow :: (Integer, Integer) -> IO Int
