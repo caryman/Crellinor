@@ -13,6 +13,7 @@ import Data.Char
 import System.Random
 import Data.Typeable(typeOf)
 import Config
+import Debug.Trace
 
 newtype Objects = Objects [Object]
 data Position = Position { x :: Int, y :: Int } deriving Show
@@ -28,13 +29,13 @@ data Object = Object {
   , walk :: [Move]
   } deriving Show
 
-getRandomPosition :: IO Position
-getRandomPosition = do
-  randomX <- randomRIO (1, 150)
-  randomY <- randomRIO (1, 59)
+getRandomPosition :: Int -> Int -> IO Position
+getRandomPosition rows cols = do
+  randomX <- randomRIO (1, fromIntegral(cols))
+  randomY <- randomRIO (1, fromIntegral(rows))
   return $ Position randomX randomY
 
-getRandomPosition2 :: Position  -> IO Position
+getRandomPosition2 :: Position -> IO Position
 getRandomPosition2 p@Position{x=x1,y=y1} = do
   return $ Position x1 y1
 
@@ -44,15 +45,15 @@ getRandomVelocity = do
   randomY <- randomRIO (0, 2)
   return $ Velocity (randomX - 1) (randomY - 1)
 
-getRandomObject :: IO Object
-getRandomObject = do
-  randomPosition1 <- liftIO getRandomPosition
+getRandomObject :: Int -> Int -> IO Object
+getRandomObject rows cols = do
+  randomPosition1 <- liftIO $ getRandomPosition rows cols
   randomVelocity <- liftIO getRandomVelocity
   randomPosition2 <- getRandomPosition2 randomPosition1
   return $ Object randomPosition1 randomPosition2 randomVelocity "o" 50 100 [E, S, E, N, W, S]
 
-getRandomObjects :: IO Objects
-getRandomObjects = Objects <$> replicateM 150 getRandomObject
+getRandomObjects :: Int -> Int -> IO Objects
+getRandomObjects rows cols = Objects <$> replicateM 60 (getRandomObject rows cols)
 
 newObject = Object {
     position1 = Position {x = 1, y = 1}
@@ -85,10 +86,6 @@ checkBoundary _ o = o
 
 renderObject :: (Integer, Integer) -> Object -> Update ()
 renderObject (rows, cols) o@Object{position1 = Position {x=x1, y=y1}, position2 = Position {x=x2,y=y2}, text = t} = do
---    moveCursor 5 20
---    drawString "               "
---    moveCursor 5 20
---    drawString ("x: " ++ show (x1) ++ " y: " ++ show (y1)) 
     moveCursor (fromIntegral y1) (fromIntegral x1)
     drawString t
     moveCursor (fromIntegral y2) (fromIntegral x2)
@@ -149,18 +146,36 @@ runSimulation c = runCurses $ do
     setCursorMode CursorInvisible
     setEcho False
     size <- screenSize
-    row <- liftIO $ getRow size
-    col <- liftIO $ getCol size
-    (Objects objs) <- liftIO $ getRandomObjects
+    rows <- liftIO $ getRow size
+    cols <- liftIO $ getCol size
+    (Objects objs) <- liftIO $ getRandomObjects rows cols
     simLoop (Objects objs) c
+
+--drawObj :: Object -> IO ()
+--drawObj o@Object{position1=p1} = do 
+--    drawString("col: " ++ show(p1)) 
+--    print ""
+
+loop :: Curses ()
+loop = do
+    k <- checkKeyboard
+    if k == Nothing
+        then return ()
+    else
+        loop
+
+printObjs :: [Object] -> IO ()
+printObjs o = do
+    print $ "printing objects"
+    mapM_ print o
+    
 
 -- Program entry point
 main :: IO ()
 main = do
     globalVars <- readConfig
     print $ (ccEntitySpeed globalVars)
-
-    runSimulation globalVars
+    void $ runSimulation globalVars
 
 
 getRow :: (Integer, Integer) -> IO Int
