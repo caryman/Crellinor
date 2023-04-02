@@ -13,7 +13,8 @@ import Data.Char
 import System.Random
 import Data.Typeable(typeOf)
 import Config
-import Debug.Trace
+--import Debug.Trace
+import Logging(debug,trace)
 
 newtype Objects = Objects [Object]
 data Position = Position { x :: Int, y :: Int } deriving Show
@@ -52,8 +53,11 @@ getRandomObject rows cols = do
   randomPosition2 <- getRandomPosition2 randomPosition1
   return $ Object randomPosition1 randomPosition2 randomVelocity "o" 50 100 [E, S, E, N, W, S]
 
-getRandomObjects :: Int -> Int -> IO Objects
-getRandomObjects rows cols = Objects <$> replicateM 60 (getRandomObject rows cols)
+getRandomObjects :: (Integer, Integer) -> IO Objects
+getRandomObjects (rows, cols) = Objects <$> replicateM 2000 (getRandomObject r c)
+    where
+       r = fromIntegral(rows-2)
+       c = fromIntegral(cols-2)
 
 newObject = Object {
     position1 = Position {x = 1, y = 1}
@@ -80,12 +84,14 @@ checkBoundary (rows, cols) o@Object{position1 = Position {x=x1, y=y1}, position2
     | (x1 <= 1 && dx1 < 0) || (x1 >= right && dx1 > 0) = o{velocity = Velocity {dx=(-dx1), dy=dy1}}
     | otherwise = o
     where
-       bottom = fromIntegral(rows-1)
-       right = fromIntegral(cols-1)
+       bottom = fromIntegral(rows-2)
+       right = fromIntegral(cols-2)
 checkBoundary _ o = o
 
 renderObject :: (Integer, Integer) -> Object -> Update ()
 renderObject (rows, cols) o@Object{position1 = Position {x=x1, y=y1}, position2 = Position {x=x2,y=y2}, text = t} = do
+    let s = "[" ++ (show rows) ++ ":" ++ (show cols) ++ "] row: " ++ (show y1) ++ " col: " ++ (show x1) ++ "prow: " ++ (show y2) ++ " pcol: " ++ (show x2)
+    trace s (drawString " ")
     moveCursor (fromIntegral y1) (fromIntegral x1)
     drawString t
     moveCursor (fromIntegral y2) (fromIntegral x2)
@@ -95,8 +101,10 @@ renderObject _ _ = return ()
 renderWorld :: (Integer, Integer) -> Objects -> Update ()
 renderWorld (rows, cols) (Objects objs) = do
     --clear
-    moveCursor 2 10
-    drawString ("rows: " ++ show (rows) ++ " cols: " ++ show (cols)) 
+    --moveCursor 2 10
+    --drawString ("rows: " ++ show (rows) ++ " cols: " ++ show (cols)) 
+    let s = "start of batch"
+    trace s (drawString " ")
     mapM_ (renderObject (rows, cols)) objs
 
 updatePosition :: Object -> Object
@@ -146,9 +154,11 @@ runSimulation c = runCurses $ do
     setCursorMode CursorInvisible
     setEcho False
     size <- screenSize
-    rows <- liftIO $ getRow size
-    cols <- liftIO $ getCol size
-    (Objects objs) <- liftIO $ getRandomObjects rows cols
+    --rows <- liftIO $ getRow size
+    --cols <- liftIO $ getCol size
+    --let s = "ROWS: " ++ (show rows) ++ " COLS: " ++ (show cols)
+    --trace s render
+    (Objects objs) <- liftIO $ getRandomObjects size --rows cols
     simLoop (Objects objs) c
 
 --drawObj :: Object -> IO ()
@@ -205,6 +215,13 @@ quit = do
     updateWindow w $ do
         clear
     render
+
+logEntry :: String -> IO ()
+logEntry s = do
+    path <- System.Directory.getCurrentDirectory
+    let fileNameAndPath = path ++ "/" ++ "log.txt" --filename
+    writeLog fileNameAndPath s
+    --return ()
 
 -- nothing to say
 readConfig :: IO CrellinorConfig

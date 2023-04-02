@@ -30,6 +30,9 @@ dependencies:
 - filepath
 - directory
 - random
+- mtl
+- old-locale
+- old-time
 
 library:
   source-dirs: src

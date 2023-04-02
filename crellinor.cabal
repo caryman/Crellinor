@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Config
+      Logging
   other-modules:
       Paths_crellinor
   hs-source-dirs:
@@ -35,7 +36,10 @@ library
     , bytestring
     , directory
     , filepath
+    , mtl
     , ncurses
+    , old-locale
+    , old-time
     , random
     , text
     , time
@@ -56,7 +60,10 @@ executable crellinor-exe
     , crellinor
     , directory
     , filepath
+    , mtl
     , ncurses
+    , old-locale
+    , old-time
     , random
     , text
     , time
@@ -78,7 +85,10 @@ test-suite crellinor-test
     , crellinor
     , directory
     , filepath
+    , mtl
     , ncurses
+    , old-locale
+    , old-time
     , random
     , text
     , time

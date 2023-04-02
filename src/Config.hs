@@ -5,6 +5,7 @@ import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad
 import Data.Monoid
+import Control.Monad.IO.Class
 import Data.Typeable
 import Data.Yaml
 import System.IO
@@ -16,6 +17,8 @@ import qualified Data.ByteString as B
 import qualified Data.Text as T
 import System.FilePath ((</>))
 import System.Directory (copyFile)
+import UI.NCurses
+
 
 fileName :: String
 fileName = "config.yaml"
@@ -119,3 +122,6 @@ writeConfigurationSilent :: ToJSON a => FilePath -> a -> IO ()
 writeConfigurationSilent path = B.writeFile path . addVersion . encode where
   addVersion :: ByteString -> ByteString
   addVersion = append . pack $ "# Version " ++ programVersion ++ "\n"
+
+writeLog :: FilePath -> String -> IO ()
+writeLog path s = B.writeFile path (pack s)
