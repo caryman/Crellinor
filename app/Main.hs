@@ -53,8 +53,8 @@ getRandomObject rows cols = do
   randomPosition2 <- getRandomPosition2 randomPosition1
   return $ Object randomPosition1 randomPosition2 randomVelocity "o" 50 100 [E, S, E, N, W, S]
 
-getRandomObjects :: (Integer, Integer) -> IO Objects
-getRandomObjects (rows, cols) = Objects <$> replicateM 2000 (getRandomObject r c)
+getRandomObjects :: (Integer, Integer) -> Int -> IO Objects
+getRandomObjects (rows, cols) amt = Objects <$> replicateM amt (getRandomObject r c)
     where
        r = fromIntegral(rows-2)
        c = fromIntegral(cols-2)
@@ -86,30 +86,28 @@ checkBoundary (rows, cols) o@Object{position1 = Position {x=x1, y=y1}, position2
     where
        bottom = fromIntegral(rows-2)
        right = fromIntegral(cols-2)
-checkBoundary _ o = o
 
 renderObject :: (Integer, Integer) -> Object -> Update ()
 renderObject (rows, cols) o@Object{position1 = Position {x=x1, y=y1}, position2 = Position {x=x2,y=y2}, text = t} = do
-    let s = "[" ++ (show rows) ++ ":" ++ (show cols) ++ "] row: " ++ (show y1) ++ " col: " ++ (show x1) ++ "prow: " ++ (show y2) ++ " pcol: " ++ (show x2)
-    trace s (drawString " ")
+    --let s = "[" ++ (show rows) ++ ":" ++ (show cols) ++ "] row: " ++ (show y1) ++ " col: " ++ (show x1) ++ "prow: " ++ (show y2) ++ " pcol: " ++ (show x2)
+    --trace s (drawString " ")
     moveCursor (fromIntegral y1) (fromIntegral x1)
     drawString t
     moveCursor (fromIntegral y2) (fromIntegral x2)
     drawString " "
-renderObject _ _ = return ()
 
 renderWorld :: (Integer, Integer) -> Objects -> Update ()
 renderWorld (rows, cols) (Objects objs) = do
     --clear
     --moveCursor 2 10
     --drawString ("rows: " ++ show (rows) ++ " cols: " ++ show (cols)) 
-    let s = "start of batch"
-    trace s (drawString " ")
+    --let s = "start of batch"
+    --trace s (drawString " ")
+    --setAttribute (AttributeColor 4) True
     mapM_ (renderObject (rows, cols)) objs
 
 updatePosition :: Object -> Object
 updatePosition o@Object{position1 = Position {x=x1, y=y1}, position2 = Position {x=x2, y=y2}, velocity = Velocity {dx=dx1, dy=dy1}} = o{position1 = Position {x = (x1 + dx1), y = (y1 + dy1)}, position2 = Position {x=x1, y=y1}}
-updatePosition o = o
 
 
 updateWorld :: (Integer, Integer) -> Objects -> Objects
@@ -154,17 +152,14 @@ runSimulation c = runCurses $ do
     setCursorMode CursorInvisible
     setEcho False
     size <- screenSize
-    --rows <- liftIO $ getRow size
-    --cols <- liftIO $ getCol size
-    --let s = "ROWS: " ++ (show rows) ++ " COLS: " ++ (show cols)
-    --trace s render
-    (Objects objs) <- liftIO $ getRandomObjects size --rows cols
+    first <- newColorID ColorRed ColorBlack 4
+    w <- defaultWindow
+    updateWindow w $ do
+        setColor first
+    render
+    (Objects objs) <- liftIO $ getRandomObjects size (ccEntityCount c)
     simLoop (Objects objs) c
 
---drawObj :: Object -> IO ()
---drawObj o@Object{position1=p1} = do 
---    drawString("col: " ++ show(p1)) 
---    print ""
 
 loop :: Curses ()
 loop = do
